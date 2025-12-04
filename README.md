@@ -76,16 +76,17 @@ This will:
 - Log you into Teleport
 - Verify your access
 
-### 3. Configure VS Code (Recommended)
+### 3. Configure Editors (Recommended)
 
 Select **"Configure VS Code for Teleport"**
 
-This will automatically set the required VS Code setting:
+This will automatically configure both VS Code and Cursor (if installed):
 - Sets `remote.SSH.useLocalServer = false`
 - Required for Teleport SSH connections to work properly
-- Backs up your existing VS Code settings
+- Backs up your existing settings
+- **Windows Users:** Fixes "posix_spawnp: No such file or directory" error in Remote-SSH
 
-**Note:** Restart VS Code after running this step.
+**Note:** Restart your editor after running this step.
 
 ### 4. Update SSH Configuration
 
@@ -110,9 +111,9 @@ Select **"Teleport SSH (Connect to a node)"**
 - Select a login user (ubuntu, root, etc.)
 - Connect automatically
 
-**Option B: Via VS Code Remote-SSH**
+**Option B: Via VS Code/Cursor Remote-SSH**
 
-1. Open VS Code
+1. Open VS Code or Cursor
 2. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
 3. Type "Remote-SSH: Connect to Host"
 4. Select your node from the dropdown
@@ -134,9 +135,10 @@ ssh ip-172-31-16-103
 - **Interactive Mode**: Arrow-key navigation for all operations
 - **GitHub SSO**: Seamless authentication via GitHub
 - **Auto SSH Config**: Automatically updates `~/.ssh/config` with all accessible nodes
-- **VS Code Integration**: Nodes appear in VS Code Remote-SSH dropdown
+- **Editor Integration**: Automatically configures VS Code and Cursor for Remote-SSH
+- **Windows Support**: Native Windows support without WSL2, fixes "posix_spawnp" error
 - **Smart Login Detection**: Automatically detects and prioritizes available logins (ubuntu > root > others)
-- **Safe Updates**: Backs up SSH config before making changes
+- **Safe Updates**: Backs up SSH config and editor settings before making changes
 
 ## Important Notes
 
@@ -174,10 +176,15 @@ Run `scicom-helper` and select **"Teleport Setup (Login)"**.
 2. Re-run: **"Teleport Update Nodes"**
 3. Verify node list: `tsh ls`
 
-### Nodes not appearing in VS Code
+### Nodes not appearing in VS Code/Cursor
 1. Re-run: **"Teleport Update Nodes"**
-2. Restart VS Code
+2. Restart your editor
 3. Check `~/.ssh/config` contains your nodes
+
+### "posix_spawnp: No such file or directory" error (Windows)
+1. Run: **"Configure VS Code for Teleport"** to set `remote.SSH.useLocalServer = false`
+2. Restart your editor
+3. Try connecting again
 
 ## Build from Source
 
@@ -291,6 +298,7 @@ For issues or questions:
 
 - [Teleport Documentation](https://goteleport.com/docs/)
 - [VS Code Remote-SSH](https://code.visualstudio.com/docs/remote/ssh)
+- [Cursor Editor](https://cursor.sh/)
 - [Official Teleport VS Code Guide](https://goteleport.com/docs/enroll-resources/server-access/guides/vscode/)
 
 ---
