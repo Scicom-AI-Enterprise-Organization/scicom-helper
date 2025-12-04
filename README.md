@@ -43,9 +43,8 @@ sudo yum install teleport
 **Other Linux distributions:** See [Teleport Linux Installation](https://goteleport.com/docs/installation/linux/)
 
 **Windows:**
-Use WSL2 and follow Linux instructions above.
 
-Install WSL2: https://learn.microsoft.com/en-us/windows/wsl/install
+Download the Windows installer from [Teleport Downloads](https://goteleport.com/download) or use the [community installer](https://goteleport.com/docs/installation/windows/).
 
 **Verify installation:**
 ```bash
@@ -214,6 +213,7 @@ Outputs:
 - `build/scicom-helper-darwin-arm64` (macOS Apple Silicon)
 - `build/scicom-helper-linux-amd64` (Linux x86_64)
 - `build/scicom-helper-linux-arm64` (Linux ARM64)
+- `build/scicom-helper-windows-amd64.exe` (Windows x86_64)
 
 ## Project Structure
 

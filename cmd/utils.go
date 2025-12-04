@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 )
 
 // isTshInstalled checks if the tsh command is available
 func isTshInstalled() bool {
-	cmd := exec.Command("which", "tsh")
+	cmdName := "which"
+	if runtime.GOOS == "windows" {
+		cmdName = "where"
+	}
+	cmd := exec.Command(cmdName, "tsh")
 	return cmd.Run() == nil
 }
 

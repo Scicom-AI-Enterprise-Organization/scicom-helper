@@ -76,7 +76,7 @@ Once the tag is pushed, GitHub Actions will automatically:
    - macOS ARM64 (`darwin/arm64`)
    - Linux AMD64 (`linux/amd64`)
    - Linux ARM64 (`linux/arm64`)
-   - **Note:** Windows users should use WSL2 with the Linux binary
+   - Windows AMD64 (`windows/amd64`)
 
 2. Generate SHA256 checksums
 
@@ -109,9 +109,8 @@ GOOS=<os> GOARCH=<arch> go build -o build/scicom-helper-<os>-<arch> .
 - `scicom-helper-darwin-arm64` - macOS Apple Silicon binary
 - `scicom-helper-linux-amd64` - Linux x86_64 binary
 - `scicom-helper-linux-arm64` - Linux ARM64 binary
+- `scicom-helper-windows-amd64.exe` - Windows x86_64 binary
 - `checksums.txt` - SHA256 checksums for all binaries
-
-**Windows Support:** Windows users should use WSL2 (Windows Subsystem for Linux) and run the Linux binary.
 
 ## Testing the Release
 
@@ -133,11 +132,15 @@ chmod +x scicom-helper
 ./scicom-helper
 ```
 
-### Windows (via WSL2)
+### Windows
 
-1. Install WSL2: https://learn.microsoft.com/en-us/windows/wsl/install
-2. Open WSL2 terminal
-3. Follow Linux installation instructions above
+```powershell
+# Download using PowerShell
+Invoke-WebRequest -Uri "https://github.com/YOUR_ORG/teleport/releases/download/v1.0.0/scicom-helper-windows-amd64.exe" -OutFile "scicom-helper.exe"
+
+# Run the binary
+.\scicom-helper.exe
+```
 
 ## Verifying Checksums
 

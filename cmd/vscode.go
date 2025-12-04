@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // configureVSCode sets up VS Code settings for Teleport compatibility
@@ -18,8 +19,20 @@ func configureVSCode() error {
 		return fmt.Errorf("failed to get home directory: %v", err)
 	}
 
-	// VS Code settings path (macOS)
-	vscodeSettingsPath := filepath.Join(home, "Library", "Application Support", "Code", "User", "settings.json")
+	// VS Code settings path (cross-platform)
+	var vscodeSettingsPath string
+	if runtime.GOOS == "windows" {
+		appData := os.Getenv("APPDATA")
+		if appData == "" {
+			return fmt.Errorf("APPDATA environment variable not set")
+		}
+		vscodeSettingsPath = filepath.Join(appData, "Code", "User", "settings.json")
+	} else if runtime.GOOS == "darwin" {
+		vscodeSettingsPath = filepath.Join(home, "Library", "Application Support", "Code", "User", "settings.json")
+	} else {
+		// Linux
+		vscodeSettingsPath = filepath.Join(home, ".config", "Code", "User", "settings.json")
+	}
 
 	// Check if VS Code settings directory exists
 	vscodeDir := filepath.Dir(vscodeSettingsPath)

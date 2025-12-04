@@ -30,6 +30,8 @@ build-all:
 	@GOOS=linux GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 .
 	@echo "Building for Linux (arm64)..."
 	@GOOS=linux GOARCH=arm64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 .
+	@echo "Building for Windows (amd64)..."
+	@GOOS=windows GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe .
 	@echo "Build complete. Binaries in ./$(BUILD_DIR)/"
 
 release-check:

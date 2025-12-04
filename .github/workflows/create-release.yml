@@ -134,6 +134,10 @@ jobs:
           echo "Building for Linux ARM64..."
           GOOS=linux GOARCH=arm64 go build -o build/scicom-helper-linux-arm64 .
 
+          # Windows AMD64
+          echo "Building for Windows AMD64..."
+          GOOS=windows GOARCH=amd64 go build -o build/scicom-helper-windows-amd64.exe .
+
       - name: Create checksums
         run: |
           cd build
@@ -155,6 +159,7 @@ jobs:
             build/scicom-helper-darwin-arm64
             build/scicom-helper-linux-amd64
             build/scicom-helper-linux-arm64
+            build/scicom-helper-windows-amd64.exe
             build/checksums.txt
           draft: false
           prerelease: false
@@ -190,10 +195,16 @@ jobs:
             sudo mv scicom-helper /usr/local/bin/
             ```
 
-            ### Windows Users
-            **Recommended:** Use WSL2 (Windows Subsystem for Linux) and follow the Linux installation instructions above.
+            ### Windows (AMD64)
+            ```powershell
+            # Download the binary (using PowerShell)
+            Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ steps.calc_version.outputs.NEW_VERSION }}/scicom-helper-windows-amd64.exe" -OutFile "scicom-helper.exe"
 
-            Install WSL2: https://learn.microsoft.com/en-us/windows/wsl/install
+            # Move to a directory in your PATH (optional)
+            # Move-Item scicom-helper.exe C:\Windows\System32\
+            ```
+
+            Or download directly from the Assets section below and run `scicom-helper.exe`
 
             ## Verify Checksum
             ```bash

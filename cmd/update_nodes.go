@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -12,6 +13,15 @@ const (
 	markerStart = "# BEGIN SCICOM-HELPER TELEPORT CONFIG"
 	markerEnd   = "# END SCICOM-HELPER TELEPORT CONFIG"
 )
+
+// toSSHPath converts a Windows path to SSH config format (forward slashes)
+// SSH config files expect forward slashes even on Windows
+func toSSHPath(path string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ReplaceAll(path, "\\", "/")
+	}
+	return path
+}
 
 // updateNodes fetches Teleport nodes and updates SSH config
 func updateNodes() error {
@@ -154,9 +164,9 @@ func updateNodes() error {
 	hostList = append(hostList, teleportProxy)
 
 	configBuilder.WriteString(fmt.Sprintf("Host %s\n", strings.Join(hostList, " ")))
-	configBuilder.WriteString(fmt.Sprintf("    UserKnownHostsFile \"%s/.tsh/known_hosts\"\n", home))
-	configBuilder.WriteString(fmt.Sprintf("    IdentityFile \"%s/%s\"\n", tshKeysDir, user))
-	configBuilder.WriteString(fmt.Sprintf("    CertificateFile \"%s/%s-ssh/%s-cert.pub\"\n", tshKeysDir, user, teleportProxy))
+	configBuilder.WriteString(fmt.Sprintf("    UserKnownHostsFile \"%s\"\n", toSSHPath(filepath.Join(home, ".tsh", "known_hosts"))))
+	configBuilder.WriteString(fmt.Sprintf("    IdentityFile \"%s\"\n", toSSHPath(filepath.Join(tshKeysDir, user))))
+	configBuilder.WriteString(fmt.Sprintf("    CertificateFile \"%s\"\n", toSSHPath(filepath.Join(tshKeysDir, user+"-ssh", teleportProxy+"-cert.pub"))))
 	configBuilder.WriteString("\n")
 
 	// For non-proxy hosts (all nodes and wildcard subdomains)
