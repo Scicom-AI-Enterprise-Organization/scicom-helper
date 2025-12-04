@@ -73,6 +73,7 @@ scicom-helper
 
 This will:
 - Open your browser for GitHub SSO authentication
+- **IMPORTANT:** When prompted, grant access to the **AIES-Infra** organization
 - Log you into Teleport
 - Verify your access
 
