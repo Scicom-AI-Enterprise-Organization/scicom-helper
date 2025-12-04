@@ -56,27 +56,21 @@ tsh version
 
 ### 1. Download the Binary
 
-Download the latest release for your platform:
+**Step 1:** Go to the [latest release page](../../releases/latest)
 
-**macOS (Apple Silicon):**
-```bash
-curl -L -o scicom-helper https://github.com/YOUR_ORG/teleport/releases/latest/download/scicom-helper-darwin-arm64
-chmod +x scicom-helper
-sudo mv scicom-helper /usr/local/bin/
-```
+**Step 2:** Download the appropriate binary for your platform:
+- **macOS (Apple Silicon):** `scicom-helper-darwin-arm64`
+- **Linux (AMD64):** `scicom-helper-linux-amd64`
+- **Linux (ARM64):** `scicom-helper-linux-arm64`
 
-**Linux (AMD64):**
-```bash
-curl -L -o scicom-helper https://github.com/YOUR_ORG/teleport/releases/latest/download/scicom-helper-linux-amd64
-chmod +x scicom-helper
-sudo mv scicom-helper /usr/local/bin/
-```
+**Step 3:** Install the binary:
 
-**Linux (ARM64):**
 ```bash
-curl -L -o scicom-helper https://github.com/YOUR_ORG/teleport/releases/latest/download/scicom-helper-linux-arm64
-chmod +x scicom-helper
-sudo mv scicom-helper /usr/local/bin/
+# Make it executable
+chmod +x scicom-helper-*
+
+# Move to system path (replace * with your downloaded file name)
+sudo mv scicom-helper-* /usr/local/bin/scicom-helper
 ```
 
 **Verify Installation:**
