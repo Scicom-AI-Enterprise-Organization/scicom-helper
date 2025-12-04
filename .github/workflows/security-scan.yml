@@ -1,0 +1,326 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  sast-scan:
+    name: SAST Code Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-fmt sarif -out gosec-results.sarif ./...'
+
+      - name: Run gosec for detailed report
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -fmt=json -out=gosec-results.json ./... || true
+          gosec -fmt=text -out=gosec-report.txt ./... || true
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/golang
+            p/owasp-top-ten
+          generateSarif: "1"
+
+      - name: Generate SAST summary
+        if: always()
+        run: |
+          echo "# 🔍 SAST Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Date:** $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Gosec results
+          if [ -f gosec-results.json ]; then
+            GOSEC_ISSUES=$(jq '.Issues | length' gosec-results.json 2>/dev/null || echo "0")
+            echo "## 🔒 Gosec (Go Security)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Found **$GOSEC_ISSUES** potential security issues in Go code" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$GOSEC_ISSUES" != "0" ] && [ "$GOSEC_ISSUES" != "null" ]; then
+              echo "### Sample Issues:" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              jq -r '.Issues[:5] | .[] | "- **\(.severity)**: \(.rule_id) - \(.details) (\(.file):\(.line))"' gosec-results.json 2>/dev/null >> $GITHUB_STEP_SUMMARY || echo "See detailed report in artifacts" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ No security issues found!" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          # Semgrep results
+          echo "## 🎯 Semgrep (Multi-language SAST)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f semgrep.sarif ]; then
+            SEMGREP_RESULTS=$(jq '.runs[0].results | length' semgrep.sarif 2>/dev/null || echo "0")
+            echo "Found **$SEMGREP_RESULTS** findings" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Scan completed - see artifacts for details" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "📦 Full SAST reports available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload gosec SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.sarif
+          category: gosec
+
+      - name: Upload SAST results as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-scan-results
+          path: |
+            gosec-results.sarif
+            gosec-results.json
+            gosec-report.txt
+            semgrep.sarif
+          retention-days: 30
+
+  trivy-scan:
+    name: Trivy Dependency Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Run Trivy vulnerability scanner (Table format)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          output: 'trivy-report.txt'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          trivyignores: '.trivyignore'
+
+      - name: Run Trivy vulnerability scanner (SARIF format)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Run Trivy vulnerability scanner (JSON format)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-results.json'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+
+      - name: Generate HTML report
+        if: always()
+        run: |
+          # Install trivy locally to generate HTML report
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
+
+          # Generate HTML report
+          trivy fs --format template --template "@contrib/html.tpl" -o trivy-report.html --severity CRITICAL,HIGH,MEDIUM,LOW .
+
+      - name: Generate Markdown summary
+        if: always()
+        run: |
+          echo "# 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Date:** $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Parse JSON results and create summary
+          if [ -f trivy-results.json ]; then
+            CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-results.json || echo "0")
+            HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-results.json || echo "0")
+            MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' trivy-results.json || echo "0")
+            LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' trivy-results.json || echo "0")
+
+            echo "## 📊 Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 🔴 Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟠 High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟡 Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟢 Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
+            if [ $CRITICAL -gt 0 ] || [ $HIGH -gt 0 ]; then
+              echo "⚠️ **Action Required:** Found $CRITICAL critical and $HIGH high severity vulnerabilities." >> $GITHUB_STEP_SUMMARY
+            elif [ $MEDIUM -gt 0 ]; then
+              echo "ℹ️ **Review Recommended:** Found $MEDIUM medium severity vulnerabilities." >> $GITHUB_STEP_SUMMARY
+            elif [ $TOTAL -eq 0 ]; then
+              echo "✅ **All Clear:** No vulnerabilities detected!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ **Looks Good:** Only low severity vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add table report if it exists
+          if [ -f trivy-report.txt ]; then
+            echo "## 📋 Detailed Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            head -n 100 trivy-report.txt >> $GITHUB_STEP_SUMMARY
+            if [ $(wc -l < trivy-report.txt) -gt 100 ]; then
+              echo "... (truncated, see full report in artifacts)" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Full reports available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Upload scan results as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-scan-results
+          path: |
+            trivy-report.txt
+            trivy-report.html
+            trivy-results.json
+            trivy-results.sarif
+          retention-days: 30
+
+      - name: Comment on PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read JSON results
+            let results = { Results: [] };
+            try {
+              results = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
+            } catch (e) {
+              console.log('Could not read trivy-results.json');
+            }
+
+            // Count vulnerabilities
+            let critical = 0, high = 0, medium = 0, low = 0;
+            if (results.Results) {
+              results.Results.forEach(result => {
+                if (result.Vulnerabilities) {
+                  result.Vulnerabilities.forEach(vuln => {
+                    switch(vuln.Severity) {
+                      case 'CRITICAL': critical++; break;
+                      case 'HIGH': high++; break;
+                      case 'MEDIUM': medium++; break;
+                      case 'LOW': low++; break;
+                    }
+                  });
+                }
+              });
+            }
+
+            const total = critical + high + medium + low;
+
+            // Build comment
+            let emoji = '✅';
+            let status = 'All Clear';
+            if (critical > 0 || high > 0) {
+              emoji = '⚠️';
+              status = 'Action Required';
+            } else if (medium > 0) {
+              emoji = 'ℹ️';
+              status = 'Review Recommended';
+            }
+
+            const comment = `## ${emoji} Security Scan Results
+
+            **Status:** ${status}
+
+            | Severity | Count |
+            |----------|-------|
+            | 🔴 Critical | ${critical} |
+            | 🟠 High | ${high} |
+            | 🟡 Medium | ${medium} |
+            | 🟢 Low | ${low} |
+            | **Total** | **${total}** |
+
+            ${critical > 0 || high > 0 ?
+              '⚠️ **Action Required:** Please review and address critical and high severity vulnerabilities.' :
+              total === 0 ?
+                '✅ **All Clear:** No vulnerabilities detected!' :
+                '✅ **Looks Good:** No critical or high severity issues found.'
+            }
+
+            📊 View detailed results in the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            📦 Download full reports from workflow artifacts
+            `;
+
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Fail on critical or high vulnerabilities
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f trivy-results.json ]; then
+            CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-results.json || echo "0")
+            HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-results.json || echo "0")
+
+            if [ $CRITICAL -gt 0 ] || [ $HIGH -gt 0 ]; then
+              echo "::error::Found $CRITICAL critical and $HIGH high severity vulnerabilities"
+              echo "Please review and address these vulnerabilities before merging."
+              exit 1
+            fi
+          fi

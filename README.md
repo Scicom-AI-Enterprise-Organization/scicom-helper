@@ -257,6 +257,76 @@ make test
 make clean
 ```
 
+## Security
+
+This project includes comprehensive automated security scanning with multiple tools.
+
+### Security Scanning Tools
+
+**SAST (Static Application Security Testing):**
+- **[gosec](https://github.com/securego/gosec)** - Go-specific security scanner
+- **[Semgrep](https://semgrep.dev/)** - Multi-language pattern-based SAST
+
+**Dependency Scanning:**
+- **[Trivy](https://github.com/aquasecurity/trivy)** - Comprehensive vulnerability scanner
+
+### Automated Security Scans
+
+Security scans run automatically:
+- **On every push** to main branch
+- **On every pull request**
+- **Daily** at 6 AM UTC
+- **Manually** via GitHub Actions workflow dispatch
+
+### What Gets Scanned
+
+1. **Source Code (SAST)**
+   - Security vulnerabilities in Go code
+   - Common coding mistakes and anti-patterns
+   - OWASP Top 10 security issues
+   - CWE Top 25 weaknesses
+
+2. **Dependencies (SCA)**
+   - Go module vulnerabilities
+   - Transitive dependencies
+   - Known CVEs in packages
+   - License compliance issues
+
+### Scan Results
+
+View security scan results:
+1. Go to the [Actions tab](../../actions/workflows/security-scan.yml)
+2. Click on the latest workflow run
+3. View the summary or download detailed reports from artifacts
+
+Results are also available in:
+- **GitHub Security tab** - SARIF format for native GitHub integration
+- **Pull Request comments** - Automatic vulnerability summary (Trivy)
+- **Workflow artifacts** - HTML, JSON, SARIF, and text reports
+
+### Vulnerability Severity
+
+The scanner checks for:
+- 🔴 **Critical** - Immediate action required
+- 🟠 **High** - Should be addressed soon
+- 🟡 **Medium** - Review and plan remediation
+- 🟢 **Low** - Monitor and address when possible
+
+**Note:** PRs with critical or high severity vulnerabilities will fail the security check.
+
+### Ignoring False Positives
+
+To ignore false positives or accepted risks, add CVE IDs to [`.trivyignore`](.trivyignore):
+
+```
+# Example
+CVE-2023-12345  # False positive - not applicable to our use case
+```
+
+### Reporting Security Issues
+
+For security concerns, please see [SECURITY.md](SECURITY.md).
+
 ## Creating a Release
 
 The project uses GitHub Actions for automated releases.
