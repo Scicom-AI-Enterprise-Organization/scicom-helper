@@ -20,8 +20,8 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    name: Create and Tag Release
+  create-and-release:
+    name: Create Version and Build Release
     runs-on: ubuntu-latest
 
     steps:
@@ -93,7 +93,7 @@ jobs:
           fi
           echo "Tag $NEW_VERSION is available"
 
-      - name: Create and push tag
+      - name: Create tag
         run: |
           NEW_VERSION="${{ steps.calc_version.outputs.NEW_VERSION }}"
           LATEST_TAG="${{ steps.get_latest_tag.outputs.LATEST_TAG }}"
@@ -111,10 +111,97 @@ jobs:
           fi
 
           git tag -a "$NEW_VERSION" -m "$TAG_MESSAGE"
-          git push origin "$NEW_VERSION"
+          echo "✅ Created tag: $NEW_VERSION"
 
-          echo "✅ Successfully created and pushed tag: $NEW_VERSION"
-          echo "🚀 Release workflow will now automatically build and publish the release"
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build binaries
+        run: |
+          mkdir -p build
+
+          # macOS ARM64
+          echo "Building for macOS ARM64..."
+          GOOS=darwin GOARCH=arm64 go build -o build/scicom-helper-darwin-arm64 .
+
+          # Linux AMD64
+          echo "Building for Linux AMD64..."
+          GOOS=linux GOARCH=amd64 go build -o build/scicom-helper-linux-amd64 .
+
+          # Linux ARM64
+          echo "Building for Linux ARM64..."
+          GOOS=linux GOARCH=arm64 go build -o build/scicom-helper-linux-arm64 .
+
+      - name: Create checksums
+        run: |
+          cd build
+          sha256sum scicom-helper-* > checksums.txt
+          cat checksums.txt
+
+      - name: Push tag
+        run: |
+          NEW_VERSION="${{ steps.calc_version.outputs.NEW_VERSION }}"
+          git push origin "$NEW_VERSION"
+          echo "✅ Pushed tag: $NEW_VERSION"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.calc_version.outputs.NEW_VERSION }}
+          name: Release ${{ steps.calc_version.outputs.NEW_VERSION }}
+          files: |
+            build/scicom-helper-darwin-arm64
+            build/scicom-helper-linux-amd64
+            build/scicom-helper-linux-arm64
+            build/checksums.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## Release ${{ steps.calc_version.outputs.NEW_VERSION }}
+
+            **Previous Version:** ${{ steps.get_latest_tag.outputs.LATEST_TAG }}
+            **Bump Type:** ${{ inputs.version_type }}
+
+            ## Installation
+
+            Download the appropriate binary for your platform:
+
+            ### macOS (Apple Silicon)
+            ```bash
+            curl -L -o scicom-helper https://github.com/${{ github.repository }}/releases/download/${{ steps.calc_version.outputs.NEW_VERSION }}/scicom-helper-darwin-arm64
+            chmod +x scicom-helper
+            sudo mv scicom-helper /usr/local/bin/
+            ```
+
+            ### Linux (AMD64)
+            ```bash
+            curl -L -o scicom-helper https://github.com/${{ github.repository }}/releases/download/${{ steps.calc_version.outputs.NEW_VERSION }}/scicom-helper-linux-amd64
+            chmod +x scicom-helper
+            sudo mv scicom-helper /usr/local/bin/
+            ```
+
+            ### Linux (ARM64)
+            ```bash
+            curl -L -o scicom-helper https://github.com/${{ github.repository }}/releases/download/${{ steps.calc_version.outputs.NEW_VERSION }}/scicom-helper-linux-arm64
+            chmod +x scicom-helper
+            sudo mv scicom-helper /usr/local/bin/
+            ```
+
+            ### Windows Users
+            **Recommended:** Use WSL2 (Windows Subsystem for Linux) and follow the Linux installation instructions above.
+
+            Install WSL2: https://learn.microsoft.com/en-us/windows/wsl/install
+
+            ## Verify Checksum
+            ```bash
+            curl -L -o checksums.txt https://github.com/${{ github.repository }}/releases/download/${{ steps.calc_version.outputs.NEW_VERSION }}/checksums.txt
+            sha256sum -c checksums.txt
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         run: |
@@ -125,15 +212,15 @@ jobs:
           **Previous Version:** \`${{ steps.get_latest_tag.outputs.LATEST_TAG }}\`
           **Bump Type:** \`${{ inputs.version_type }}\`
 
-          ### Next Steps
+          ### Release Published
 
-          The [Release workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml) has been automatically triggered and will:
-          - Build binaries for macOS ARM64, Linux AMD64/ARM64
-          - Generate SHA256 checksums
-          - Create a GitHub Release with all artifacts
-          - Add installation instructions
+          **View Release:** [${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.NEW_VERSION }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.NEW_VERSION }})
 
-          **View Release Progress:** [Actions](${{ github.server_url }}/${{ github.repository }}/actions)
+          ### Artifacts Built
+          - ✅ macOS ARM64 binary
+          - ✅ Linux AMD64 binary
+          - ✅ Linux ARM64 binary
+          - ✅ SHA256 checksums
 
-          **Release will be available at:** [${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.NEW_VERSION }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.NEW_VERSION }})
+          The release is now live and ready for download!
           EOF
