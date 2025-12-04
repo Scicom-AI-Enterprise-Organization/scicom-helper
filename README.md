@@ -19,17 +19,35 @@ sudo installer -pkg teleport-18.4.2.pkg -target /
 
 **Note:** Check [Teleport Downloads](https://goteleport.com/download) for the latest version number.
 
-**Linux:**
+**Linux (Ubuntu/Debian):**
 ```bash
-curl https://goteleport.com/static/install.sh | bash -s 15.0.0
+sudo curl https://apt.releases.teleport.dev/gpg \
+  -o /usr/share/keyrings/teleport-archive-keyring.asc
+source /etc/os-release
+echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] \
+https://apt.releases.teleport.dev/${ID?} ${VERSION_CODENAME?} stable/v18" \
+| sudo tee /etc/apt/sources.list.d/teleport.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install teleport
 ```
+
+**Linux (CentOS/RHEL):**
+```bash
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo \
+  https://yum.releases.teleport.dev/teleport.repo
+sudo yum install teleport
+```
+
+**Other Linux distributions:** See [Teleport Linux Installation](https://goteleport.com/docs/installation/linux/)
 
 **Windows:**
 Use WSL2 and follow Linux instructions above.
 
 Install WSL2: https://learn.microsoft.com/en-us/windows/wsl/install
 
-Verify installation:
+**Verify installation:**
 ```bash
 tsh version
 ```
