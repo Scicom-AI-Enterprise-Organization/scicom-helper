@@ -134,16 +134,28 @@ func updateNodes() error {
 	configBuilder.WriteString(tshConfig)
 	configBuilder.WriteString("\n")
 
-	// Add wildcard patterns for flexible hostname matching
+	// Add wildcard patterns for Teleport-managed hosts
 	tshKeysDir := filepath.Join(home, ".tsh", "keys", teleportProxy)
 	configBuilder.WriteString("# Wildcard patterns for Teleport-managed hosts\n")
-	configBuilder.WriteString(fmt.Sprintf("Host * *.%s %s\n", teleportProxy, teleportProxy))
+
+	// Build host list: all nodes + wildcard domains
+	hostList := make([]string, len(nodes))
+	copy(hostList, nodes)
+	hostList = append(hostList, fmt.Sprintf("*.%s", teleportProxy))
+	hostList = append(hostList, teleportProxy)
+
+	configBuilder.WriteString(fmt.Sprintf("Host %s\n", strings.Join(hostList, " ")))
 	configBuilder.WriteString(fmt.Sprintf("    UserKnownHostsFile \"%s/.tsh/known_hosts\"\n", home))
 	configBuilder.WriteString(fmt.Sprintf("    IdentityFile \"%s/%s\"\n", tshKeysDir, user))
 	configBuilder.WriteString(fmt.Sprintf("    CertificateFile \"%s/%s-ssh/%s-cert.pub\"\n", tshKeysDir, user, teleportProxy))
 	configBuilder.WriteString("\n")
 
-	configBuilder.WriteString(fmt.Sprintf("Host * *.%s !%s\n", teleportProxy, teleportProxy))
+	// For non-proxy hosts (all nodes and wildcard subdomains)
+	proxyHostList := make([]string, len(nodes))
+	copy(proxyHostList, nodes)
+	proxyHostList = append(proxyHostList, fmt.Sprintf("*.%s", teleportProxy))
+
+	configBuilder.WriteString(fmt.Sprintf("Host %s\n", strings.Join(proxyHostList, " ")))
 	configBuilder.WriteString("    Port 3022\n")
 	configBuilder.WriteString(fmt.Sprintf("    ProxyCommand \"tsh\" proxy ssh --cluster=%s --proxy=%s:443 %%r@%%h:%%p\n", teleportProxy, teleportProxy))
 	configBuilder.WriteString("\n")
