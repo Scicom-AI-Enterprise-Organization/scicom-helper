@@ -75,7 +75,18 @@ This will:
 - Log you into Teleport
 - Verify your access
 
-### 3. Update SSH Configuration
+### 3. Configure VS Code (Recommended)
+
+Select **"Configure VS Code for Teleport"**
+
+This will automatically set the required VS Code setting:
+- Sets `remote.SSH.useLocalServer = false`
+- Required for Teleport SSH connections to work properly
+- Backs up your existing VS Code settings
+
+**Note:** Restart VS Code after running this step.
+
+### 4. Update SSH Configuration
 
 Select **"Teleport Update Nodes (Update SSH config)"**
 
@@ -87,9 +98,9 @@ This will:
 
 **IMPORTANT:** Re-run this step whenever you gain access to new EC2 instances!
 
-### 4. Connect to Nodes
+### 5. Connect to Nodes
 
-You can now connect in two ways:
+You can now connect in three ways:
 
 **Option A: Via the CLI**
 

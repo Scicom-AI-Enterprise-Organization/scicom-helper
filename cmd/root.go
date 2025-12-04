@@ -41,6 +41,7 @@ func runInteractiveMode() {
 			Options: []string{
 				"Teleport Setup (Login)",
 				"Teleport Update Nodes (Update SSH config)",
+				"Configure VS Code for Teleport",
 				"Teleport SSH (Connect to a node)",
 				"Exit",
 			},
@@ -59,6 +60,10 @@ func runInteractiveMode() {
 			}
 		case "Teleport Update Nodes (Update SSH config)":
 			if err := updateNodes(); err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
+		case "Configure VS Code for Teleport":
+			if err := configureVSCode(); err != nil {
 				fmt.Printf("Error: %v\n", err)
 			}
 		case "Teleport SSH (Connect to a node)":
