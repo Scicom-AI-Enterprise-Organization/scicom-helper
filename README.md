@@ -12,8 +12,12 @@ Install Teleport CLI (tsh):
 
 **macOS:**
 ```bash
-brew install teleport
+# Download the latest version from https://goteleport.com/download
+curl -O https://cdn.teleport.dev/teleport-18.4.2.pkg
+sudo installer -pkg teleport-18.4.2.pkg -target /
 ```
+
+**Note:** Check [Teleport Downloads](https://goteleport.com/download) for the latest version number.
 
 **Linux:**
 ```bash
