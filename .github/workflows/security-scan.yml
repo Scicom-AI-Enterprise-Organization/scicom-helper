@@ -153,16 +153,15 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
 
       - name: Generate HTML report
+        uses: aquasecurity/trivy-action@master
         if: always()
-        run: |
-          # Install trivy locally to generate HTML report
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy -y
-
-          # Generate HTML report
-          trivy fs --format template --template "@contrib/html.tpl" -o trivy-report.html --severity CRITICAL,HIGH,MEDIUM,LOW .
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'template'
+          template: '@/contrib/html.tpl'
+          output: 'trivy-report.html'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
 
       - name: Generate Markdown summary
         if: always()
