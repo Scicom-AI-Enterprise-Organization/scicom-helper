@@ -1,4 +1,4 @@
-.PHONY: build install clean build-all test
+.PHONY: build install clean build-all test deps run release-check
 
 BINARY_NAME=scicom-helper
 BUILD_DIR=build
@@ -31,6 +31,18 @@ build-all:
 	@echo "Building for Linux (arm64)..."
 	@GOOS=linux GOARCH=arm64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 .
 	@echo "Build complete. Binaries in ./$(BUILD_DIR)/"
+
+release-check:
+	@echo "Pre-release checklist:"
+	@echo "  1. All tests pass: make test"
+	@echo "  2. Code is committed and pushed"
+	@echo "  3. Ready to tag with version"
+	@echo ""
+	@echo "To create a release:"
+	@echo "  git tag -a v1.0.0 -m 'Release v1.0.0'"
+	@echo "  git push origin v1.0.0"
+	@echo ""
+	@echo "GitHub Actions will automatically build and create the release."
 
 test:
 	@echo "Running tests..."

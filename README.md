@@ -1,359 +1,183 @@
-# Accessing EC2 via Teleport with VS Code Remote
+# Scicom Helper - Teleport EC2 Access Tool
 
 ## Overview
 
-This guide helps developers connect to EC2 instances managed by Teleport using VS Code Remote-SSH. All EC2 instances are automatically enrolled in Teleport and accessed through short SSH aliases for convenience.
+`scicom-helper` is a CLI tool that simplifies connecting to EC2 instances managed by Teleport. It provides an interactive interface for managing Teleport access and automatically configures SSH for VS Code Remote-SSH integration.
 
-**Teleport Server:** teleport-iam.aies.scicom.dev
-
-## Quick Start: Using Scicom-Helper CLI (Recommended)
-
-The easiest way to get started is using the `scicom-helper` CLI tool with interactive mode.
-
-### Installation
-
-```bash
-# Build from source
-cd /path/to/teleport
-make build
-
-# Install to your PATH
-make install
-```
-
-### Usage
-
-Simply run:
-```bash
-scicom-helper
-```
-
-Use arrow keys to navigate the menu:
-- **Teleport Setup (Login)**: Log in with GitHub SSO
-- **Teleport Update Nodes**: Configure SSH for all nodes (VS Code compatible)
-- **Teleport SSH**: Interactive node and login user selection, then connect
-- **Exit**: Quit the tool
-
-After running "Teleport Update Nodes", all your nodes will appear in VS Code's Remote-SSH dropdown!
-
-For detailed CLI documentation, see the [Scicom-Helper CLI Guide](#scicom-helper-cli) section below.
-
----
-
-## Manual Setup (Alternative)
+**Teleport Server:** `teleport-iam.aies.scicom.dev`
 
 ## Prerequisites
 
-- Teleport CLI installed on your machine
-- VS Code with Remote-SSH extension
-- EC2 access approved via Jira ticket
+Install Teleport CLI (tsh):
 
-## Step 1: Request EC2 Access
-
-Create a Jira ticket in the Infrastructure Request project: https://scicom-ai-es.atlassian.net/jira/core/projects/IR/list
-
-Include the following information:
-
-- Purpose of EC2 instance
-- Specifications needed (CPU, memory, GPU)
-- Expected duration of use
-- Project/team information
-
-**For Platform Engineers:** Once ticket is created, provision the EC2 instance with auto-enrollment to Teleport enabled.
-
-## Step 2: Install Teleport CLI
-
-### macOS
-
+**macOS:**
 ```bash
 brew install teleport
 ```
 
-### Linux
-
+**Linux:**
 ```bash
 curl https://goteleport.com/static/install.sh | bash -s 15.0.0
 ```
 
-### Windows
+**Windows:**
+Use WSL2 and follow Linux instructions above.
 
-Download from: https://goteleport.com/download
+Install WSL2: https://learn.microsoft.com/en-us/windows/wsl/install
 
 Verify installation:
-
 ```bash
 tsh version
 ```
 
-## Step 3: Login to Teleport
+## Quick Start
+
+### 1. Download the Binary
+
+Download the latest release for your platform:
+
+**macOS (Apple Silicon):**
+```bash
+curl -L -o scicom-helper https://github.com/YOUR_ORG/teleport/releases/latest/download/scicom-helper-darwin-arm64
+chmod +x scicom-helper
+sudo mv scicom-helper /usr/local/bin/
+```
+
+**Linux (AMD64):**
+```bash
+curl -L -o scicom-helper https://github.com/YOUR_ORG/teleport/releases/latest/download/scicom-helper-linux-amd64
+chmod +x scicom-helper
+sudo mv scicom-helper /usr/local/bin/
+```
+
+**Linux (ARM64):**
+```bash
+curl -L -o scicom-helper https://github.com/YOUR_ORG/teleport/releases/latest/download/scicom-helper-linux-arm64
+chmod +x scicom-helper
+sudo mv scicom-helper /usr/local/bin/
+```
+
+**Verify Installation:**
+```bash
+scicom-helper
+```
+
+### 2. Login to Teleport
+
+Run the tool and select **"Teleport Setup (Login)"**:
 
 ```bash
-tsh login --proxy=teleport-iam.aies.scicom.dev --auth=github-connector
+scicom-helper
 ```
 
-This will open your browser for authentication. Complete the login process.
+This will:
+- Open your browser for GitHub SSO authentication
+- Log you into Teleport
+- Verify your access
 
-Verify access and list available nodes:
+### 3. Update SSH Configuration
 
-```bash
-tsh ls
-```
+Select **"Teleport Update Nodes (Update SSH config)"**
 
-Example output:
+This will:
+- Backup your existing `~/.ssh/config`
+- Fetch all accessible nodes from Teleport
+- Generate optimized SSH configuration
+- Enable VS Code Remote-SSH integration
 
-```
-Node Name      Address    Labels
--------------- ---------- -------------------------------------------
-ip-10-0-101-89 ⟵ Tunnel   environment=development,managed-by=teleport
-```
+**IMPORTANT:** Re-run this step whenever you gain access to new EC2 instances!
 
-## Step 4: Configure SSH for Teleport
+### 4. Connect to Nodes
 
-Run our automated setup script (recommended) or follow manual steps below.
+You can now connect in two ways:
 
-### Option A: Automated Setup (Recommended)
+**Option A: Via the CLI**
 
-Download and run the setup script:
+Select **"Teleport SSH (Connect to a node)"**
+- Choose a node from the list
+- Select a login user (ubuntu, root, etc.)
+- Connect automatically
 
-```bash
-curl -o ~/setup-teleport-ssh.sh https://raw.githubusercontent.com/YOUR_ORG/scripts/main/setup-teleport-ssh.sh
-chmod +x ~/setup-teleport-ssh.sh
-~/setup-teleport-ssh.sh
-```
-
-This script will:
-
-- Generate Teleport SSH configuration
-- Add shorthand aliases for all nodes
-- Configure VS Code compatibility
-- Backup your existing SSH config
-
-### Option B: Manual Setup
-
-#### 1. Generate Teleport Configuration
-
-```bash
-tsh config --proxy=teleport.aies.scicom.dev > ~/teleport-ssh-config.txt
-```
-
-#### 2. Append to SSH Config
-
-```bash
-cat ~/teleport-ssh-config.txt >> ~/.ssh/config
-```
-
-#### 3. Add Wildcard Alias Pattern
-
-Add this to your `~/.ssh/config` after the Teleport configuration:
-
-```
-# Custom aliases - add ip-* to Teleport patterns
-Host ip-* *.teleport.aies.scicom.dev teleport.aies.scicom.dev
-    UserKnownHostsFile "/Users/YOUR_USERNAME/.tsh/known_hosts"
-    IdentityFile "/Users/YOUR_USERNAME/.tsh/keys/teleport.aies.scicom.dev/YOUR_TSH_USER"
-    CertificateFile "/Users/YOUR_USERNAME/.tsh/keys/teleport.aies.scicom.dev/YOUR_TSH_USER-ssh/teleport.aies.scicom.dev-cert.pub"
-
-Host ip-* *.teleport.aies.scicom.dev !teleport.aies.scicom.dev
-    Port 3022
-    ProxyCommand "/usr/local/bin/tsh" proxy ssh --cluster=teleport.aies.scicom.dev --proxy=teleport.aies.scicom.dev:443 %r@%h:%p
-
-# Wildcard alias definition
-Host ip-*
-    HostName %h.teleport.aies.scicom.dev
-    User ubuntu
-```
-
-**Important:** Replace `YOUR_USERNAME` and `YOUR_TSH_USER` with your actual values.
-
-## Step 5: Connect via SSH
-
-Now you can connect using just the node name:
-
-```bash
-ssh ip-10-0-101-89
-```
-
-Instead of the full command:
-
-```bash
-ssh ubuntu@ip-10-0-101-89.teleport.aies.scicom.dev
-```
-
-## Step 6: Configure VS Code Remote-SSH
+**Option B: Via VS Code Remote-SSH**
 
 1. Open VS Code
-2. Install the **Remote - SSH** extension if not already installed
-3. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
-4. Type "Remote-SSH: Connect to Host"
-5. Select your EC2 instance (e.g., `ip-10-0-101-89`)
-6. VS Code will connect through Teleport automatically
+2. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+3. Type "Remote-SSH: Connect to Host"
+4. Select your node from the dropdown
+5. Connect!
 
-Your EC2 instances will appear in the VS Code Remote-SSH host list with their short names.
-
-## Automation Scripts
-
-### Script 1: Setup Teleport SSH Config
-
-**File:** `scripts/setup-teleport-ssh.sh`
-
-This script automates the entire SSH configuration process. See the script file for details.
-
-### Script 2: Update Node Aliases
-
-**File:** `scripts/update-teleport-nodes.sh`
-
-This script fetches all available nodes from Teleport and adds specific aliases to SSH config. See the script file for details.
-
-### Script 3: Combined Setup
-
-**File:** `scripts/teleport-full-setup.sh`
-
-This script combines both setup and node update. See the script file for details.
-
-## Usage Instructions
-
-### Initial Setup
+**Option C: Via SSH Command**
 
 ```bash
-# Download all scripts
-curl -o ~/setup-teleport-ssh.sh https://raw.githubusercontent.com/YOUR_ORG/scripts/main/setup-teleport-ssh.sh
-curl -o ~/update-teleport-nodes.sh https://raw.githubusercontent.com/YOUR_ORG/scripts/main/update-teleport-nodes.sh
-curl -o ~/teleport-full-setup.sh https://raw.githubusercontent.com/YOUR_ORG/scripts/main/teleport-full-setup.sh
-
-# Make executable
-chmod +x ~/setup-teleport-ssh.sh ~/update-teleport-nodes.sh ~/teleport-full-setup.sh
-
-# Run complete setup
-~/teleport-full-setup.sh
+ssh <node-name>
 ```
 
-### Updating Node List
-
-When new EC2 instances are added or removed, refresh your node aliases:
-
+Example:
 ```bash
-~/update-teleport-nodes.sh
+ssh ip-172-31-16-103
 ```
 
-This ensures VS Code Remote-SSH shows all available nodes.
+## Features
+
+- **Interactive Mode**: Arrow-key navigation for all operations
+- **GitHub SSO**: Seamless authentication via GitHub
+- **Auto SSH Config**: Automatically updates `~/.ssh/config` with all accessible nodes
+- **VS Code Integration**: Nodes appear in VS Code Remote-SSH dropdown
+- **Smart Login Detection**: Automatically detects and prioritizes available logins (ubuntu > root > others)
+- **Safe Updates**: Backs up SSH config before making changes
+
+## Important Notes
+
+### When to Re-run "Update Nodes"
+
+Run **"Teleport Update Nodes"** again whenever:
+- You've been granted access to new EC2 instances
+- New instances have been added to Teleport
+- You want to refresh your SSH configuration
+- Your nodes don't appear in VS Code Remote-SSH
+
+### Session Expiry
+
+Teleport sessions expire after **12 hours**. If you see authentication errors:
+
+1. Run `scicom-helper`
+2. Select **"Teleport Setup (Login)"** again
+3. Re-authenticate via browser
 
 ## Troubleshooting
 
-### Connection Hangs or Timeout
+### "tsh: command not found"
+Install Teleport CLI from prerequisites section above.
 
-**Issue:** SSH connection hangs or times out
+### "Not logged in to Teleport"
+Run `scicom-helper` and select **"Teleport Setup (Login)"**.
 
-**Solution:**
+### "No nodes found"
+- Verify access: `tsh ls`
+- Request EC2 access via Jira: https://scicom-ai-es.atlassian.net/jira/core/projects/IR/list
+- Contact Platform Engineering team
 
-- Ensure you're logged in to Teleport: `tsh login --proxy=teleport.aies.scicom.dev:443`
-- Check Teleport status: `tsh status`
-- Verify node is accessible: `tsh ls`
-- Try connecting with verbose output: `ssh -vvv ip-10-0-101-89`
+### "SSH connection failed"
+1. Check Teleport login: `tsh status`
+2. Re-run: **"Teleport Update Nodes"**
+3. Verify node list: `tsh ls`
 
-### VS Code Can't Find Host
+### Nodes not appearing in VS Code
+1. Re-run: **"Teleport Update Nodes"**
+2. Restart VS Code
+3. Check `~/.ssh/config` contains your nodes
 
-**Issue:** Node doesn't appear in VS Code Remote-SSH
+## Build from Source
 
-**Solution:**
+If you prefer to build the tool yourself:
 
-- Run the node update script: `~/update-teleport-nodes.sh`
-- Reload VS Code
-- Check `~/.ssh/config` contains your node
+### Prerequisites
+- Go 1.22 or higher
 
-### Certificate Expired
-
-**Issue:** "Certificate has expired" error
-
-**Solution:**
-
-```bash
-tsh login --proxy=teleport.aies.scicom.dev:443
-```
-
-Teleport certificates expire after 12 hours by default.
-
-### Permission Denied
-
-**Issue:** "Permission denied (publickey)"
-
-**Solution:**
-
-- Verify you have access: `tsh ls`
-- Check if node name is correct
-- Ensure SSH config has correct IdentityFile path
-- Contact platform team if you need access to specific nodes
-
-### Wrong User
-
-**Issue:** Connecting as wrong user
-
-**Solution:**
-
-The default user is `ubuntu`. If you need a different user, specify it:
+### Build and Install
 
 ```bash
-ssh different_user@ip-10-0-101-89
-```
-
-Or update the alias in `~/.ssh/config`:
-
-```
-Host ip-10-0-101-89
-    HostName ip-10-0-101-89.teleport.aies.scicom.dev
-    User different_user
-```
-
-## Best Practices
-
-- **Regular Updates:** Run `update-teleport-nodes.sh` weekly to keep node list current
-- **Session Management:** Teleport sessions expire after 12 hours - re-login when needed
-- **Security:** Never share your Teleport credentials or SSH keys
-- **Naming Convention:** EC2 instances follow the pattern `ip-10-0-XXX-XX`
-- **Backup:** The scripts automatically backup your SSH config before making changes
-
-## Support
-
-For issues or questions:
-
-- Create a ticket in Infrastructure Request: https://scicom-ai-es.atlassian.net/jira/core/projects/IR/list
-- Contact: Platform Engineering Team
-- Email: adha.sahar@scicom.com.my
-
-## Additional Resources
-
-- [Teleport Documentation](https://goteleport.com/docs/)
-- [VS Code Remote-SSH](https://code.visualstudio.com/docs/remote/ssh)
-- [Official Teleport VS Code Guide](https://goteleport.com/docs/enroll-resources/server-access/guides/vscode/)
-
----
-
----
-
-## Scicom-Helper CLI
-
-The `scicom-helper` is a Go-based CLI tool that provides an interactive interface for managing Teleport access.
-
-### Features
-
-- **Interactive Mode**: Arrow-key navigation for all operations
-- **Teleport Setup**: GitHub SSO authentication
-- **Automatic SSH Config**: Updates `~/.ssh/config` with all nodes
-- **VS Code Integration**: Nodes appear in VS Code Remote-SSH dropdown
-- **Node & Login Selection**: Interactive selection of nodes and login users (ubuntu, root, ec2-user, etc.)
-- **Safe Updates**: Automatically backs up SSH config before changes
-- **Future-Proof**: Designed to be extended with more features
-
-### Installation
-
-#### Prerequisites
-
-1. Teleport CLI (tsh) installed: https://goteleport.com/download
-2. Go 1.22+ (for building)
-
-#### Build and Install
-
-```bash
-# Clone/navigate to repository
+# Clone the repository
 cd /path/to/teleport
 
 # Build binary
@@ -366,7 +190,7 @@ make install
 scicom-helper
 ```
 
-#### Build for Multiple Platforms
+### Build for All Platforms
 
 ```bash
 make build-all
@@ -378,64 +202,7 @@ Outputs:
 - `build/scicom-helper-linux-amd64` (Linux x86_64)
 - `build/scicom-helper-linux-arm64` (Linux ARM64)
 
-### Usage Guide
-
-#### 1. First Time Setup
-
-```bash
-scicom-helper
-```
-
-Select: `Teleport Setup (Login)`
-- Logs you into Teleport using GitHub SSO
-- Opens browser for authentication
-- Verifies login status
-
-#### 2. Configure SSH
-
-Select: `Teleport Update Nodes (Update SSH config)`
-- Backs up existing SSH config
-- Fetches all Teleport-managed nodes
-- Generates optimized SSH configuration
-- Enables VS Code Remote-SSH integration
-
-The tool creates a managed section in `~/.ssh/config`:
-```
-# BEGIN SCICOM-HELPER TELEPORT CONFIG
-# ... auto-generated configuration ...
-# END SCICOM-HELPER TELEPORT CONFIG
-```
-
-Running this command again will safely update only this section.
-
-#### 3. Connect to Nodes
-
-Select: `Teleport SSH (Connect to a node)`
-- Lists all available nodes
-- Use arrow keys to select a node
-- Lists available login users for the selected node
-- Use arrow keys to select a login user (ubuntu, root, ec2-user, etc.)
-- Automatically connects via `tsh ssh` with the selected login
-- Press Ctrl+D or type `exit` to disconnect
-
-#### 4. VS Code Remote-SSH
-
-After running "Teleport Update Nodes":
-1. Open VS Code
-2. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
-3. Select "Remote-SSH: Connect to Host"
-4. See all your nodes in the dropdown
-5. Click to connect!
-
-### Configuration
-
-The CLI uses these settings:
-- **Proxy**: `teleport-iam.aies.scicom.dev`
-- **Auth Method**: `github-connector` (GitHub SSO)
-- **Default User**: `ubuntu`
-- **Port**: `3022` (for proxy connections)
-
-### Project Structure
+## Project Structure
 
 ```
 .
@@ -451,7 +218,7 @@ The CLI uses these settings:
 └── README.md            # This file
 ```
 
-### Development
+## Development
 
 ```bash
 # Install dependencies
@@ -470,53 +237,34 @@ make test
 make clean
 ```
 
-### Troubleshooting
+## Creating a Release
 
-#### "tsh: command not found"
-Install Teleport CLI: https://goteleport.com/download
+The project uses GitHub Actions for automated releases.
 
-#### "Not logged in to Teleport"
-Run the "Teleport Setup" option first.
-
-#### "No nodes found"
-Verify access: `tsh ls`
-Contact platform team if you need node access.
-
-#### SSH connection fails
-1. Check login: `tsh status`
-2. Update nodes: Run "Teleport Update Nodes"
-3. Verify node list: `tsh ls`
-
-### Extending the CLI
-
-The Platform Engineering team can add new features:
-
-1. Create new file in `cmd/` directory
-2. Implement feature function
-3. Add option to menu in `cmd/root.go`
-4. Update this README
-
-Example for adding a new feature:
-```go
-// cmd/new_feature.go
-package cmd
-
-func newFeature() error {
-    // Implementation
-    return nil
-}
-
-// Add to cmd/root.go menu:
-Options: []string{
-    "Teleport Setup (Login)",
-    "Teleport Update Nodes",
-    "Teleport SSH",
-    "New Feature",  // Add here
-    "Exit",
-}
+```bash
+make release-check  # Review release checklist
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
 ```
+
+GitHub Actions will automatically build binaries and create a release.
+
+For detailed instructions, see [RELEASING.md](RELEASING.md).
+
+## Support
+
+For issues or questions:
+- Create a Jira ticket: https://scicom-ai-es.atlassian.net/jira/core/projects/IR/list
+- Contact: Platform Engineering Team
+- Email: adha.sahar@scicom.com.my
+
+## Additional Resources
+
+- [Teleport Documentation](https://goteleport.com/docs/)
+- [VS Code Remote-SSH](https://code.visualstudio.com/docs/remote/ssh)
+- [Official Teleport VS Code Guide](https://goteleport.com/docs/enroll-resources/server-access/guides/vscode/)
 
 ---
 
-**Last Updated:** December 3, 2025
+**Last Updated:** December 4, 2025
 **Maintained By:** Platform Engineering Team
