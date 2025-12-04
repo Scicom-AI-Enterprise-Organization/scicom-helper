@@ -90,7 +90,7 @@ jobs:
           echo "📦 Full SAST reports available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload gosec SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: gosec-results.sarif
