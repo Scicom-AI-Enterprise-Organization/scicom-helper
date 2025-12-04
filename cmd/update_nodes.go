@@ -25,6 +25,15 @@ func updateNodes() error {
 		return fmt.Errorf("not logged in to Teleport")
 	}
 
+	// Automatically configure VS Code for Teleport
+	fmt.Println("Step 1/2: Configuring VS Code for Teleport...")
+	if err := configureVSCode(); err != nil {
+		fmt.Printf("Warning: VS Code configuration failed: %v\n", err)
+		fmt.Println("Continuing with SSH config update...")
+	}
+	fmt.Println()
+	fmt.Println("Step 2/2: Updating SSH configuration...")
+
 	// Get SSH config path
 	home, err := os.UserHomeDir()
 	if err != nil {
