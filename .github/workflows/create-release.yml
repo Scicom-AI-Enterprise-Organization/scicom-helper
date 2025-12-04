@@ -1,0 +1,139 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (optional, overrides version_type). Format: v1.2.3'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create and Tag Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Get latest tag
+        id: get_latest_tag
+        run: |
+          # Get the latest tag, or use v0.0.0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: calc_version
+        run: |
+          LATEST_TAG="${{ steps.get_latest_tag.outputs.LATEST_TAG }}"
+          CUSTOM_VERSION="${{ inputs.custom_version }}"
+
+          # If custom version is provided, use it
+          if [ -n "$CUSTOM_VERSION" ]; then
+            # Ensure it starts with 'v'
+            if [[ ! "$CUSTOM_VERSION" =~ ^v ]]; then
+              NEW_VERSION="v$CUSTOM_VERSION"
+            else
+              NEW_VERSION="$CUSTOM_VERSION"
+            fi
+            echo "Using custom version: $NEW_VERSION"
+            echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Remove 'v' prefix for calculation
+          VERSION=${LATEST_TAG#v}
+
+          # Split version into major, minor, patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Bump version based on input
+          case "${{ inputs.version_type }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          NEW_VERSION="${{ steps.calc_version.outputs.NEW_VERSION }}"
+          if git rev-parse "$NEW_VERSION" >/dev/null 2>&1; then
+            echo "ERROR: Tag $NEW_VERSION already exists!"
+            exit 1
+          fi
+          echo "Tag $NEW_VERSION is available"
+
+      - name: Create and push tag
+        run: |
+          NEW_VERSION="${{ steps.calc_version.outputs.NEW_VERSION }}"
+          LATEST_TAG="${{ steps.get_latest_tag.outputs.LATEST_TAG }}"
+          VERSION_TYPE="${{ inputs.version_type }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create annotated tag
+          if [ -n "${{ inputs.custom_version }}" ]; then
+            TAG_MESSAGE="Release $NEW_VERSION (custom version)"
+          else
+            TAG_MESSAGE="Release $NEW_VERSION ($VERSION_TYPE bump from $LATEST_TAG)"
+          fi
+
+          git tag -a "$NEW_VERSION" -m "$TAG_MESSAGE"
+          git push origin "$NEW_VERSION"
+
+          echo "✅ Successfully created and pushed tag: $NEW_VERSION"
+          echo "🚀 Release workflow will now automatically build and publish the release"
+
+      - name: Summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          ## Release Created Successfully! 🎉
+
+          **New Version:** \`${{ steps.calc_version.outputs.NEW_VERSION }}\`
+          **Previous Version:** \`${{ steps.get_latest_tag.outputs.LATEST_TAG }}\`
+          **Bump Type:** \`${{ inputs.version_type }}\`
+
+          ### Next Steps
+
+          The [Release workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml) has been automatically triggered and will:
+          - Build binaries for macOS ARM64, Linux AMD64/ARM64
+          - Generate SHA256 checksums
+          - Create a GitHub Release with all artifacts
+          - Add installation instructions
+
+          **View Release Progress:** [Actions](${{ github.server_url }}/${{ github.repository }}/actions)
+
+          **Release will be available at:** [${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.NEW_VERSION }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.NEW_VERSION }})
+          EOF

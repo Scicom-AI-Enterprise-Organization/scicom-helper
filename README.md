@@ -241,13 +241,29 @@ make clean
 
 The project uses GitHub Actions for automated releases.
 
+### Option 1: Automated Release (Recommended)
+
+1. Go to [Actions → Create Release](../../actions/workflows/create-release.yml)
+2. Click **"Run workflow"**
+3. Select version bump type:
+   - **patch**: Bug fixes (1.0.0 → 1.0.1)
+   - **minor**: New features (1.0.0 → 1.1.0)
+   - **major**: Breaking changes (1.0.0 → 2.0.0)
+4. Click **"Run workflow"**
+
+GitHub Actions will automatically:
+- Calculate the new version
+- Create and push the tag
+- Build binaries
+- Create a GitHub Release
+
+### Option 2: Manual Release
+
 ```bash
 make release-check  # Review release checklist
 git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
-
-GitHub Actions will automatically build binaries and create a release.
 
 For detailed instructions, see [RELEASING.md](RELEASING.md).
 

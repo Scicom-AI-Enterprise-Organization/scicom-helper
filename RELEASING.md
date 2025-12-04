@@ -6,21 +6,52 @@ This document describes how to create a new release of `scicom-helper`.
 
 - Commit and push all changes
 - Ensure all tests pass: `make test`
-- Decide on version number (follow [Semantic Versioning](https://semver.org/))
+- Understand [Semantic Versioning](https://semver.org/)
 
-## Quick Release
+## Quick Release (Automated) - Recommended
 
-Run the pre-release check:
+### 1. Navigate to GitHub Actions
+
+Go to: [Actions → Create Release](../../actions/workflows/create-release.yml)
+
+### 2. Run the Workflow
+
+1. Click **"Run workflow"** button
+2. Select the **version bump type**:
+   - **patch** (v1.0.0 → v1.0.1): Bug fixes, backward compatible
+   - **minor** (v1.0.0 → v1.1.0): New features, backward compatible
+   - **major** (v1.0.0 → v2.0.0): Breaking changes
+3. *(Optional)* Enter a **custom version** to override automatic calculation
+4. Click **"Run workflow"** to start
+
+### 3. Workflow Execution
+
+The workflow will automatically:
+1. Fetch the latest tag (or start from v0.0.0 if none exists)
+2. Calculate the new version based on your selection
+3. Create an annotated git tag
+4. Push the tag to GitHub
+5. Trigger the Release workflow
+
+### 4. Monitor Progress
+
+- Watch the [Create Release workflow](../../actions/workflows/create-release.yml) complete
+- The [Release workflow](../../actions/workflows/release.yml) will automatically start
+- Check the [Releases page](../../releases) for the published release
+
+---
+
+## Manual Release (Alternative)
+
+If you prefer manual control:
+
+### 1. Run Pre-release Check
 
 ```bash
 make release-check
 ```
 
-## Creating a Release
-
-### 1. Tag the Release
-
-Create an annotated tag with your version:
+### 2. Create Tag
 
 ```bash
 git tag -a v1.0.0 -m "Release v1.0.0"
@@ -31,13 +62,13 @@ Version format: `vMAJOR.MINOR.PATCH`
 - **MINOR**: New functionality, backward compatible
 - **PATCH**: Bug fixes, backward compatible
 
-### 2. Push the Tag
+### 3. Push Tag
 
 ```bash
 git push origin v1.0.0
 ```
 
-### 3. GitHub Actions Workflow
+### 4. GitHub Actions Workflow
 
 Once the tag is pushed, GitHub Actions will automatically:
 
@@ -55,7 +86,7 @@ Once the tag is pushed, GitHub Actions will automatically:
    - Auto-generated release notes
    - Installation instructions
 
-### 4. Monitor the Build
+### 5. Monitor the Build
 
 1. Go to the [Actions tab](../../actions) in your repository
 2. Watch the "Release" workflow
