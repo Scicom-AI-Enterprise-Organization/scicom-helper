@@ -30,7 +30,7 @@ jobs:
           go-version: '1.22'
 
       - name: Run gosec Security Scanner
-        uses: securego/gosec@master
+        uses: securego/gosec@v2.21.4
         with:
           args: '-fmt sarif -out gosec-results.sarif ./...'
 
@@ -125,7 +125,7 @@ jobs:
         run: go mod download
 
       - name: Run Trivy vulnerability scanner (Table format)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -135,7 +135,7 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Run Trivy vulnerability scanner (SARIF format)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -144,7 +144,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Run Trivy vulnerability scanner (JSON format)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -152,14 +152,21 @@ jobs:
           output: 'trivy-results.json'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
 
+      - name: Download HTML template
+        if: always()
+        run: |
+          mkdir -p templates
+          curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -o templates/html.tpl
+          echo "Downloaded HTML template"
+
       - name: Generate HTML report
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         if: always()
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'template'
-          template: '@/contrib/html.tpl'
+          template: '@templates/html.tpl'
           output: 'trivy-report.html'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
 
