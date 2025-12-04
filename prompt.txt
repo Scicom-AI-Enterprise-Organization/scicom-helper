@@ -1,0 +1,18 @@
+Instead of bash script, can you make an cli app, using golang and interactive mode enabled, let's call it scicom-helper app. This app will help scicom developer to gain access to ec2 easily and they can select it from vscode-remote drop down. That's one of it. Scicom Platform engineering team will keep updating this cli tool to add more functionality in the future. For now, let's focus on this one feature:
+
+teleport cli wrapper:
+
+User must have teleport cli installed first. So make sure tsh command exists.
+And when running this command scicom-helper, it will turn into interactive mode, with the following options:
+
+teleport setup:
+which will run teleport status if user logged in. If not, login to teleport using github sso:
+ tsh login --proxy=teleport-iam.aies.scicom.dev --auth=github-connector
+
+teleport update-node:
+Have a look at @scripts/setup-teleport-ssh.sh and @scripts/update-teleport-nodes.sh
+It will update ~/.ssh/config with all those wildcard, so uesr can easily ssh to ec2. And user can also easily view the host when using vscode-remote. One thing to be considered, the node name will not always start with ip-*. We might have virtual machines somewhere outside ec2 to be managed by teleport as well.|
+
+teleport ssh:
+list down a list of node, and let user select it and then ssh into it 
+

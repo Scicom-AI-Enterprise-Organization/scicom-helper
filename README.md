@@ -4,7 +4,43 @@
 
 This guide helps developers connect to EC2 instances managed by Teleport using VS Code Remote-SSH. All EC2 instances are automatically enrolled in Teleport and accessed through short SSH aliases for convenience.
 
-**Teleport Server:** teleport.aies.scicom.dev
+**Teleport Server:** teleport-iam.aies.scicom.dev
+
+## Quick Start: Using Scicom-Helper CLI (Recommended)
+
+The easiest way to get started is using the `scicom-helper` CLI tool with interactive mode.
+
+### Installation
+
+```bash
+# Build from source
+cd /path/to/teleport
+make build
+
+# Install to your PATH
+make install
+```
+
+### Usage
+
+Simply run:
+```bash
+scicom-helper
+```
+
+Use arrow keys to navigate the menu:
+- **Teleport Setup (Login)**: Log in with GitHub SSO
+- **Teleport Update Nodes**: Configure SSH for all nodes (VS Code compatible)
+- **Teleport SSH**: Interactive node and login user selection, then connect
+- **Exit**: Quit the tool
+
+After running "Teleport Update Nodes", all your nodes will appear in VS Code's Remote-SSH dropdown!
+
+For detailed CLI documentation, see the [Scicom-Helper CLI Guide](#scicom-helper-cli) section below.
+
+---
+
+## Manual Setup (Alternative)
 
 ## Prerequisites
 
@@ -52,7 +88,7 @@ tsh version
 ## Step 3: Login to Teleport
 
 ```bash
-tsh login --proxy=teleport.aies.scicom.dev:443
+tsh login --proxy=teleport-iam.aies.scicom.dev --auth=github-connector
 ```
 
 This will open your browser for authentication. Complete the login process.
@@ -291,5 +327,196 @@ For issues or questions:
 
 ---
 
-**Last Updated:** November 27, 2025
+---
+
+## Scicom-Helper CLI
+
+The `scicom-helper` is a Go-based CLI tool that provides an interactive interface for managing Teleport access.
+
+### Features
+
+- **Interactive Mode**: Arrow-key navigation for all operations
+- **Teleport Setup**: GitHub SSO authentication
+- **Automatic SSH Config**: Updates `~/.ssh/config` with all nodes
+- **VS Code Integration**: Nodes appear in VS Code Remote-SSH dropdown
+- **Node & Login Selection**: Interactive selection of nodes and login users (ubuntu, root, ec2-user, etc.)
+- **Safe Updates**: Automatically backs up SSH config before changes
+- **Future-Proof**: Designed to be extended with more features
+
+### Installation
+
+#### Prerequisites
+
+1. Teleport CLI (tsh) installed: https://goteleport.com/download
+2. Go 1.22+ (for building)
+
+#### Build and Install
+
+```bash
+# Clone/navigate to repository
+cd /path/to/teleport
+
+# Build binary
+make build
+
+# Install to /usr/local/bin
+make install
+
+# Verify installation
+scicom-helper
+```
+
+#### Build for Multiple Platforms
+
+```bash
+make build-all
+```
+
+Outputs:
+- `build/scicom-helper-darwin-amd64` (macOS Intel)
+- `build/scicom-helper-darwin-arm64` (macOS Apple Silicon)
+- `build/scicom-helper-linux-amd64` (Linux x86_64)
+- `build/scicom-helper-linux-arm64` (Linux ARM64)
+
+### Usage Guide
+
+#### 1. First Time Setup
+
+```bash
+scicom-helper
+```
+
+Select: `Teleport Setup (Login)`
+- Logs you into Teleport using GitHub SSO
+- Opens browser for authentication
+- Verifies login status
+
+#### 2. Configure SSH
+
+Select: `Teleport Update Nodes (Update SSH config)`
+- Backs up existing SSH config
+- Fetches all Teleport-managed nodes
+- Generates optimized SSH configuration
+- Enables VS Code Remote-SSH integration
+
+The tool creates a managed section in `~/.ssh/config`:
+```
+# BEGIN SCICOM-HELPER TELEPORT CONFIG
+# ... auto-generated configuration ...
+# END SCICOM-HELPER TELEPORT CONFIG
+```
+
+Running this command again will safely update only this section.
+
+#### 3. Connect to Nodes
+
+Select: `Teleport SSH (Connect to a node)`
+- Lists all available nodes
+- Use arrow keys to select a node
+- Lists available login users for the selected node
+- Use arrow keys to select a login user (ubuntu, root, ec2-user, etc.)
+- Automatically connects via `tsh ssh` with the selected login
+- Press Ctrl+D or type `exit` to disconnect
+
+#### 4. VS Code Remote-SSH
+
+After running "Teleport Update Nodes":
+1. Open VS Code
+2. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+3. Select "Remote-SSH: Connect to Host"
+4. See all your nodes in the dropdown
+5. Click to connect!
+
+### Configuration
+
+The CLI uses these settings:
+- **Proxy**: `teleport-iam.aies.scicom.dev`
+- **Auth Method**: `github-connector` (GitHub SSO)
+- **Default User**: `ubuntu`
+- **Port**: `3022` (for proxy connections)
+
+### Project Structure
+
+```
+.
+├── main.go              # Entry point
+├── cmd/
+│   ├── root.go          # CLI framework & interactive menu
+│   ├── setup.go         # Teleport login
+│   ├── update_nodes.go  # SSH config management
+│   ├── ssh.go           # Interactive SSH connection
+│   └── utils.go         # Helper functions
+├── Makefile             # Build automation
+├── go.mod               # Go dependencies
+└── README.md            # This file
+```
+
+### Development
+
+```bash
+# Install dependencies
+go mod download
+
+# Build
+go build -o scicom-helper .
+
+# Run directly (without installing)
+go run .
+
+# Run tests
+make test
+
+# Clean build artifacts
+make clean
+```
+
+### Troubleshooting
+
+#### "tsh: command not found"
+Install Teleport CLI: https://goteleport.com/download
+
+#### "Not logged in to Teleport"
+Run the "Teleport Setup" option first.
+
+#### "No nodes found"
+Verify access: `tsh ls`
+Contact platform team if you need node access.
+
+#### SSH connection fails
+1. Check login: `tsh status`
+2. Update nodes: Run "Teleport Update Nodes"
+3. Verify node list: `tsh ls`
+
+### Extending the CLI
+
+The Platform Engineering team can add new features:
+
+1. Create new file in `cmd/` directory
+2. Implement feature function
+3. Add option to menu in `cmd/root.go`
+4. Update this README
+
+Example for adding a new feature:
+```go
+// cmd/new_feature.go
+package cmd
+
+func newFeature() error {
+    // Implementation
+    return nil
+}
+
+// Add to cmd/root.go menu:
+Options: []string{
+    "Teleport Setup (Login)",
+    "Teleport Update Nodes",
+    "Teleport SSH",
+    "New Feature",  // Add here
+    "Exit",
+}
+```
+
+---
+
+**Last Updated:** December 3, 2025
 **Maintained By:** Platform Engineering Team
