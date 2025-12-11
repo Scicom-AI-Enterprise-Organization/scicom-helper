@@ -39,7 +39,8 @@ func runInteractiveMode() {
 		prompt := &survey.Select{
 			Message: "What would you like to do?",
 			Options: []string{
-				"Teleport Setup (Login)",
+				"Teleport Setup (GitHub SSO)",
+				"Teleport Setup (Local Account)",
 				"Teleport Update Nodes (Update SSH config)",
 				"Configure VS Code for Teleport",
 				"Teleport SSH (Connect to a node)",
@@ -54,8 +55,12 @@ func runInteractiveMode() {
 		}
 
 		switch choice {
-		case "Teleport Setup (Login)":
-			if err := setupTeleport(); err != nil {
+		case "Teleport Setup (GitHub SSO)":
+			if err := setupTeleportGitHub(); err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
+		case "Teleport Setup (Local Account)":
+			if err := setupTeleportLocal(); err != nil {
 				fmt.Printf("Error: %v\n", err)
 			}
 		case "Teleport Update Nodes (Update SSH config)":

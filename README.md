@@ -64,17 +64,35 @@ scicom-helper
 
 ### 2. Login to Teleport
 
-Run the tool and select **"Teleport Setup (Login)"**:
+Run the tool and choose your preferred authentication method:
 
 ```bash
 scicom-helper
 ```
+
+#### Option A: GitHub SSO (Recommended)
+
+Select **"Teleport Setup (GitHub SSO)"**
 
 This will:
 - Open your browser for GitHub SSO authentication
 - **IMPORTANT:** When prompted, grant access to the **AIES-Infra** organization
 - Log you into Teleport
 - Verify your access
+
+**Best for:** Team members with GitHub organization access
+
+#### Option B: Local Account
+
+Select **"Teleport Setup (Local Account)"**
+
+This will:
+- Prompt you for your Teleport username and password
+- Authenticate using local Teleport credentials
+- Log you into Teleport
+- Verify your access
+
+**Best for:** Users with direct Teleport account credentials
 
 ### 3. Configure Editors (Recommended)
 
@@ -133,7 +151,9 @@ ssh ip-172-31-16-103
 ## Features
 
 - **Interactive Mode**: Arrow-key navigation for all operations
-- **GitHub SSO**: Seamless authentication via GitHub
+- **Multiple Authentication Options**:
+  - GitHub SSO for organization members
+  - Local account for direct credentials
 - **Auto SSH Config**: Automatically updates `~/.ssh/config` with all accessible nodes
 - **Editor Integration**: Automatically configures VS Code and Cursor for Remote-SSH
 - **Windows Support**: Native Windows support without WSL2, fixes "posix_spawnp" error
@@ -155,8 +175,10 @@ Run **"Teleport Update Nodes"** again whenever:
 Teleport sessions expire after **12 hours**. If you see authentication errors:
 
 1. Run `scicom-helper`
-2. Select **"Teleport Setup (Login)"** again
-3. Re-authenticate via browser
+2. Select your preferred login method:
+   - **"Teleport Setup (GitHub SSO)"** for GitHub authentication
+   - **"Teleport Setup (Local Account)"** for local credentials
+3. Re-authenticate
 
 ## Troubleshooting
 
@@ -164,7 +186,7 @@ Teleport sessions expire after **12 hours**. If you see authentication errors:
 Install Teleport CLI from prerequisites section above.
 
 ### "Not logged in to Teleport"
-Run `scicom-helper` and select **"Teleport Setup (Login)"**.
+Run `scicom-helper` and select either **"Teleport Setup (GitHub SSO)"** or **"Teleport Setup (Local Account)"**.
 
 ### "No nodes found"
 - Verify access: `tsh ls`
