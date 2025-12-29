@@ -74,12 +74,24 @@ func setupTeleportLocal() error {
 	// Not logged in, initiate login
 	fmt.Println("You are not logged in to Teleport")
 	fmt.Printf("Logging in to %s using local account...\n", teleportProxy)
-	fmt.Println("You will be prompted for your username and password.\n")
 	fmt.Println()
 
-	// Run tsh login interactively without auth connector (uses default local auth)
+	// Prompt for username
+	fmt.Print("Enter your Teleport username: ")
+	var username string
+	fmt.Scanln(&username)
+
+	if username == "" {
+		return fmt.Errorf("username cannot be empty")
+	}
+
+	fmt.Println("You will be prompted for your password.")
+	fmt.Println()
+
+	// Run tsh login interactively with local auth and specified username
 	cmd := exec.Command("tsh", "login",
 		fmt.Sprintf("--proxy=%s", teleportProxy),
+		fmt.Sprintf("--user=%s", username),
 		"--auth=local")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
